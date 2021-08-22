@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<SCRIPT language="JavaScript">
+    var password; 
+    var pass1="pictou_A8b7"; 
+    password=prompt('Enter Password',' '); 
+    if (password==pass1) 
+    alert('Correct Password! Click OK to Enter!'); 
+    else { window.location="https://www.phnxtechnologies.com/"; 
+    alert('Wrong Password! Email kchen@phnxtechnologies.com for any questions.'); 
+    } 
+</SCRIPT>
+
+<html lang='en'>
+<head>
+    <meta charset='utf-8'/>
+    <title>Pictou TVWS Map</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'/>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.css' rel='stylesheet'/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+    <link rel="stylesheet" href="css/style_tvws.css">
+</head>
+<body>
+
+<!-- Load the `mapbox-gl-geocoder` plugin. -->
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.min.js"></script>
+<link rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.css"
+      type="text/css">
+
+<!-- Promise polyfill script is required -->
+<!-- to use Mapbox GL Geocoder in IE 11. -->
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script>
+<div id='map'></div>
+
+
+<!-- Adds the title and legend -->
+<div class="map-overlay">
+    <h3>&nbsp Pictou TVWS Map</h3>
+    <nav id="filter-group" class="filter-group"></nav>
+    <br>
+    <!-- <img src="https://www.w3schools.com/images/picture.jpg" alt="Girl in a jacket" width="70" height="50">
+     <img src="https://www.w3schools.com/images/picture.jpg" alt="Girl in a jacket" width="70" height="50">
+     <img src="https://www.w3schools.com/images/picture.jpg" alt="Girl in a jacket" width="70" height="50">-->
+    <br>
+
+</div>
+
+
+<script>
+    // The value for 'accessToken' begins with 'pk...'
+    mapboxgl.accessToken
+        = 'pk.eyJ1Ijoia2V2aW5jb2dzIiwiYSI6ImNra3pnbGoxazAybWcybnJ4MjlyczRpZDgifQ.rZGQ1-YHukms_QaIxxmZoA';
+    var map = new mapboxgl.Map({
+                                   container: 'map',
+                                   // Replace YOUR_STYLE_URL with your style URL.
+                                   style: 'mapbox://styles/kevincogs/ckrt9rexw0j6118rz8ropx258',
+                                   center: [- 62.621557, 45.630748],
+                                   zoom: 9.5,
+                                   pitch: 0,
+                                   bearing: 0
+                               });
+
+    // This example adds 3D terrain to a map using setTerrain with a raster-dem source.
+    // It uses exaggeration to exaggerate the height of the terrain. It also adds a sky layer that shows when the map is highly pitch
+
+    var specialLayers = ['tower-0740','civic-0740', 'spoke-0740', 't2t-0740'];
+    var layerAliases = ['Tower Layer','Civic Layer', 'Spoke Layer', 'Backhaul Layer'];
+    var layerLayout = {
+        'tower-0740': 'type,New,Colocation',
+        'civic-0740': 'style,levelone,leveltwo,levelthree',
+        'spoke-0740': 'label,GOOD,MARGINAL,BAD',
+        't2t-0740': 'type,All'             
+    };
+    var valuesAliases = {
+        'tower-0740': 'type,New,Colocation',
+        'civic-0740': 'style,>= -70dBm,-70 to -80dBm,< -80dBm',
+        'spoke-0740': 'label,>= -70dBm,-70 to -80dBm,< -80dBm',
+        't2t-0740': 'type,Connection'  
+    };
+    var layerIcons = [];
+
+    var valuesIcons = {
+        'tower-0740': ',img/newTower.svg,img/colocationTower.svg',
+        'civic-0740': ',img/point_Good.svg,img/point_Marginal.svg,img/point_Bad.svg',
+        'spoke-0740': ',img/spoke_Good.svg,img/spoke_Marginal.svg,img/spoke_Bad.svg',
+        't2t-0740': ',img/microwave_backhaul.svg',
+    };
+
+    var layers;
+
+    /*
+     This function handles any change in values (fast, slow, 2021, 2022, bell, fido, telus) and updates the map filter accordingly
+     This function should be called whenever a change is made on the values checkbox in order to update the filter.
+     There are 2 cases:
+     1. when you simply enable disable a checkbox of a value
+     2. when you disable the checkbox of a layer and then turn it back on
+     */
+    function handleValueChangeInMenu() {
+
+        for ( let entry in layerLayout ) { // loop through all the layers
+            var layer = entry;
+            var property = layerLayout[layer].split(',')[0];
+
+            var filterArr = ['any']; // prep the multi-filter used for filtering the map
+
+            for ( var x = 0; x < document.getElementsByName(layer).length; x ++ ) { // loops through all value checkboxes of the current layer we're iterating
+                if ( document.getElementsByClassName(layer)[x].checked ) { // if the checkbox of the current layer is checked then add a clause in the
+                    // filter array. if it's not checked then do nothing
+                    var value = document.getElementsByClassName(layer)[x].id.split('.');
+                    value = value[1];
+                    console.log('value checked is ' + value);
+                    if ( !isNaN(value) ) { // this case handles numeric fields, if it can be parsed to int then it's done (example: year)
+                        // in case you add a new layer in the future that is numeric but for some reasons you are making it an int then this may
+                        // cause troubles; the fix for that would be to somehow extract the data type from mapbox and rewrite the condition
+                        // from line 103
+                        filterArr.push(['==', property, parseInt(value)]); // TODO: you may want to take into account the case when value is a float; this parse will truncate the value
+                    } else {
+                        filterArr.push(['==', property, value]); // basic case when value is a string
+                    }
+                }
+            }
+            map.setFilter(layer, filterArr); // apply the filter for the current layer (line 97 loops through all the layers so this will be called as many times
+                                             // as the number of layers)
+            // if filter arr is empty then this will actually clear and display everything as expected
+        }
+    }
+
+    map.on('load', function() {
+
+        layers = map.getStyle().layers;
+
+        map.addSource('mapbox-dem', {
+            'type': 'raster-dem',
+            'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            'tileSize': 512,
+            'maxzoom': 14
+        });
+        // add the DEM source as a terrain layer with exaggerated height
+        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+
+        // add a sky layer that will show when the map is highly pitched
+        map.addLayer({
+                         'id': 'sky',
+                         'type': 'sky',
+                         'paint': {
+                             'sky-type': 'atmosphere',
+                             'sky-atmosphere-sun': [0.0, 0.0],
+                             'sky-atmosphere-sun-intensity': 15
+                         }
+                     });
+
+        var filterGroup = document.getElementById('filter-group');
+
+        for ( var specialLayerIndex = 0; specialLayerIndex < specialLayers.length; specialLayerIndex ++ ) { // iterate through the layers
+
+            // generate the checkbox of the layer
+            var input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'layer';
+            input.id = specialLayers[specialLayerIndex];
+            input.checked = true;
+            input.style.marginLeft = '25px';
+
+            // add it to the filter group
+            filterGroup.appendChild(input);
+
+            // add images to layer
+
+            // var img = document.createElement('img');
+            // img.src = layerIcons[specialLayerIndex];
+            // img.className = 'icon';
+            // filterGroup.appendChild(img);
+
+            // generate the label of the layer
+            var label = document.createElement('label');
+            label.setAttribute('for', input.id);
+            label.className = 'layerLabel'; // related to css (layerLabel)
+            label.textContent = layerAliases[specialLayerIndex];
+            filterGroup.appendChild(label);
+            input.className = 'layer';
+
+            // break to go to the next "line"
+            var breakTag = document.createElement('br');
+            filterGroup.appendChild(breakTag);
+
+            var layoutValues = layerLayout[input.id];
+            var splitLayoutValues = layoutValues.split(',');
+            var splitValueAliases = valuesAliases[specialLayers[specialLayerIndex]].split(',');
+            var splitValueIcons = valuesIcons[specialLayers[specialLayerIndex]].split(',');
+            for ( var i = 1; i < splitLayoutValues.length; i ++ ) { // loop through layer's values
+                var currentValue = splitLayoutValues[i];
+
+                // generate checkbox for layer's value
+                var valueInput = document.createElement('input');
+                valueInput.type = 'checkbox';
+                valueInput.name = specialLayers[specialLayerIndex];
+                valueInput.className = specialLayers[specialLayerIndex];
+                valueInput.id = specialLayers[specialLayerIndex] + '.' + currentValue;
+                valueInput.checked = true;
+                valueInput.style.marginLeft = '40px';
+
+                // add it to the filter group
+                filterGroup.appendChild(valueInput);
+
+                var img = document.createElement('img');
+                img.src = splitValueIcons[i];
+                img.className = 'icon';
+                filterGroup.appendChild(img);
+
+                // event listener for the checkbox of the layer's value
+                valueInput.addEventListener('change', function(e) {
+                    handleValueChangeInMenu(); // update map filters
+                });
+
+                // label for the layer's value
+                var valueLabel = document.createElement('label');
+                valueLabel.setAttribute('for', valueInput.id);
+                valueLabel.class = 'child';
+                valueLabel.className = 'child';
+                valueLabel.textContent = splitValueAliases[i];
+                filterGroup.appendChild(valueLabel);
+
+                // break
+                var breakTag = document.createElement('br');
+                filterGroup.appendChild(breakTag);
+            }
+
+            // event listener for the change in layer's checkbox
+            input.addEventListener('change', function(e) {
+                var layerClicked = e.target.id;
+                var currentChecbox = document.getElementById(layerClicked);
+
+                if ( currentChecbox.checked ) { // layer is checked
+                    // if you make a layer visible then you want to enable all the checkboxes of the values of that layer and also check all of them
+                    map.setLayoutProperty(layerClicked, 'visibility', 'visible');
+                    for ( var x = 0; x < document.getElementsByName(layerClicked).length; x ++ ) {
+                        document.getElementsByClassName(layerClicked)[x].disabled = false;
+                        document.getElementsByClassName(layerClicked)[x].checked = true;
+                    }
+                } else { // layer is unchecked
+                    map.setLayoutProperty(layerClicked, 'visibility', 'none');
+                    // if you make a layer invisible the you want to disable all the checkboxes of the values of that layer and uncheck all of them
+                    for ( var x = 0; x < document.getElementsByName(layerClicked).length; x ++ ) {
+                        document.getElementsByClassName(layerClicked)[x].checked = false;
+                        document.getElementsByClassName(layerClicked)[x].disabled = true;
+                    }
+                }
+                handleValueChangeInMenu(); // because a layer checkbox that is being checked enables all the values of the sub values then map filtering
+                // refresh should be done as well
+            });
+        }
+
+    });
+
+    // Geocoder.
+    // Add the control to the map.
+    map.addControl(
+        new MapboxGeocoder({
+                               accessToken: mapboxgl.accessToken,
+                               mapboxgl: mapboxgl
+                           })
+    );
+    
+
+    // Adds Pop-up window
+    map.on('click', function(e) {
+        var features = map.queryRenderedFeatures(e.point, {
+            layers: ['civic-0740', 'spoke-0740', 'tower-0740', 't2t-0740'] // Add my name of the layer here
+        });
+
+        if ( !features.length ) {
+            return;
+        }
+
+        var feature = features[0];
+        //Create a popup
+        // var popup = new mapboxgl.Popup({ offset: [0, -15] })
+        //   .setLngLat(feature.geometry.coordinates)
+        //   .setHTML(
+        //     '<p>' +"Area: "+ feature.properties.gsa_name + '</p>' +
+        //     '<p>' +"Type: "+ feature.properties.building_t + '</p>'
+        //     )
+        //   .addTo(map);
+        // });
+
+        //Create a popup with conditions
+        // Specify its options, and properties, and add it to the map/
+        if ( feature.layer.id == 'civic-0740' ) {
+            var popup = new mapboxgl.Popup({ offset: [0, - 15] })
+                .setLngLat(feature.geometry.coordinates)
+                .setHTML(
+                    '<h3><b>Civics Layer</b></h3>' +
+                    '<img src=' + feature.properties.img + ' width=\'600\'>'
+                )
+                .addTo(map);
+            } 
+            else if ( feature.layer.id == 't2t-0740' ) {
+                var popup = new mapboxgl.Popup({ offset: [0, - 15] })
+                new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML('<h3>Microwave Backhaul Layer</h3>' +
+                        '</h3>' + "Connection 1: " + feature.properties.UID + '</h3><p>' +
+                        '<img src=' + feature.properties.png + ' width=\'600\'>' +
+                        '</h3>' + "Connection 2: " + feature.properties.UID_2 + '</h3><p>' +
+                        '<img src=' + feature.properties.png_2 + ' width=\'600\'>'          
+                )
+                .addTo(map);
+            } else if ( feature.layer.id == 'tower-0740' ) {
+                var popup = new mapboxgl.Popup({ offset: [0, - 15] })
+                    .setLngLat(feature.geometry.coordinates)
+                    .setHTML(
+                        '<h3><b>Towers Layer</b></h3>' +
+                        '</h3>' + "Name: " + feature.properties.Tower + '</h3><p>' +
+                        '</h3>' + "Height: " + feature.properties.txh + "M" + '</h3><p>' +
+                        '</h3>' + "Type: " + feature.properties.type + " Tower" + '</h3><p>' +
+                        '</h3>' + "Good Connection PCT: " + (feature.properties.Good_Pct * 100).toFixed(2) + "%" +  '</h3><p>'
+                    )
+                    .addTo(map);
+            } else {
+        }
+
+    });
+
+    // MouseEnter and Mouse Leave, except for the spoke-0740 layer
+    let excludeListForMouseEvents = ['spoke-0740'];
+
+    for(let i=0; i < specialLayers.length; i++) {
+        let currentLayer = specialLayers[i];
+        if(!excludeListForMouseEvents.includes(currentLayer)) {
+            // Change the cursor to a pointer when the mouse is over the places layer.
+            map.on('mouseenter', currentLayer, function() {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            // Change it back to a pointer when it leaves.
+            map.on('mouseleave', currentLayer, function() {
+                map.getCanvas().style.cursor = '';
+                // if(popup != undefined) {
+                //     popup.remove();
+                // }
+            });
+        }
+    }
+
+</script>
+</body>
+</html>

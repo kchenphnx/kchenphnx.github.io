@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <title>Pictou High Speed Internet</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body { margin: 0; padding: 0; }
+      #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+    <link rel="stylesheet" href="css/style_highSpeed.css">
+  </head>
+  <body>
+    
+    <!-- Load the `mapbox-gl-geocoder` plugin. -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.css" type="text/css">
+ 
+    <!-- Promise polyfill script is required -->
+    <!-- to use Mapbox GL Geocoder in IE 11. -->
+    <script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script>
+
+    <div id='map'></div>
+
+    <!-- Adds the title and legend -->
+    <div class="map-overlay">
+      <h3>&nbsp Pictou Internet Service</h3>
+        <img src="img\fiber_home_1.svg" alt="Girl in a jacket" width="70" height="50">
+        <img src="img\wireless_home_1.svg" alt="Girl in a jacket" width="70" height="50">
+        <img src="img\nodata_home_1.svg" alt="Girl in a jacket" width="70" height="50">
+        <br>
+        <h6> &nbsp &nbsp &nbsp &nbsp Fiber &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp Wireless &nbsp &nbsp Coming Soon</h6>
+        <h4>&nbsp Count</h3>
+        <h6> &nbsp &nbsp &nbsp &nbsp &nbsp 816 &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp 2095 &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp 11409</h6>
+    </div>
+
+
+
+    <script>
+    // The value for 'accessToken' begins with 'pk...'
+    mapboxgl.accessToken = 'pk.eyJ1Ijoia2V2aW5jb2dzIiwiYSI6ImNra3pnbGoxazAybWcybnJ4MjlyczRpZDgifQ.rZGQ1-YHukms_QaIxxmZoA'; 
+    var map = new mapboxgl.Map({
+      container: 'map',
+      // Replace YOUR_STYLE_URL with your style URL.
+      style: 'mapbox://styles/kevincogs/ckpyontrg1a2817mis9lkfrk0', 
+      center: [-62.621557, 45.630748],
+      zoom: 9.5,
+      pitch: 45,
+      bearing: -17.6,
+    });
+
+    // This example adds 3D terrain to a map using setTerrain with a raster-dem source.
+    // It uses exaggeration to exaggerate the height of the terrain. It also adds a sky layer that shows when the map is highly pitch
+        map.on('load', function () {
+        map.addSource('mapbox-dem', {
+        'type': 'raster-dem',
+        'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        'tileSize': 512,
+        'maxzoom': 14
+        });
+        // add the DEM source as a terrain layer with exaggerated height
+        map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+        
+        // add a sky layer that will show when the map is highly pitched
+        map.addLayer({
+        'id': 'sky',
+        'type': 'sky',
+        'paint': {
+        'sky-type': 'atmosphere',
+        'sky-atmosphere-sun': [0.0, 0.0],
+        'sky-atmosphere-sun-intensity': 15
+        }
+        });
+        });
+
+    // Geocoder.
+    // Add the control to the map.
+    map.addControl(
+        new MapboxGeocoder({
+            accessToken: mapboxgl.accessToken,
+            mapboxgl: mapboxgl
+        })
+    );
+
+
+      // Adds Pop-up window
+    map.on('click', function(e) {
+       var features = map.queryRenderedFeatures(e.point, {
+          layers: ['fiber-simple-2', 'wireless-1', 'nointerent-3'] // Add my name of the layer here
+    });
+
+    if (!features.length) {
+      return;
+    }
+
+    var feature = features[0];
+    //Create a popup
+    // var popup = new mapboxgl.Popup({ offset: [0, -15] })
+    //   .setLngLat(feature.geometry.coordinates)
+    //   .setHTML(
+    //     '<p>' +"Area: "+ feature.properties.gsa_name + '</p>' +
+    //     '<p>' +"Type: "+ feature.properties.building_t + '</p>'
+    //     )
+    //   .addTo(map);
+    // });
+
+    //Create a popup with conditions
+    // Specify its options, and properties, and add it to the map/
+    if(feature.layer.id == "fiber-simple-2") {
+      var popup = new mapboxgl.Popup({ offset: [0, -15] })
+          .setLngLat(feature.geometry.coordinates)
+          .setHTML(
+                '<h3>Fiber Connection </h3>' +
+                '<p><b>Service Type:</b> Fiber to the Home</p>' +
+                '<p><b>Target Date:</b> Q4 2021</p>' +
+                '<p><b>Service Providers:</b> To be Announced </p>' +
+                '<p><b>Download Speeds:</b> Up to 1Gbps </p>' +
+                '<p><b>Upload Speeds:</b> Up to 1Gbps</p>' 
+          )
+          .addTo(map);
+      } else if (feature.layer.id == "wireless-1") {
+      var popup = new mapboxgl.Popup({ offset: [0, -15] })
+        .setLngLat(feature.geometry.coordinates)
+        .setHTML(
+                '<h3>Wireless Connection </h3>' +
+                '<p><b>Service Type:</b> Fixed Wireless Access</p>' +
+                '<p><b>Target Date:</b> Q4 2021</p>' +
+                '<p><b>Service Providers:</b> To be Announced</p>' +
+                '<p><b>Download Speeds:</b> 25Mbps/50Mbps</p>' +
+                '<p><b>Upload Speeds:</b> 5Mbps/10Mbps</p>' 
+          )
+        .addTo(map); 
+      } else {
+      var popup = new mapboxgl.Popup({ offset: [0, -15] })
+        .setLngLat(feature.geometry.coordinates)
+        .setHTML(
+                '<h3>Service Coming Soon </h3>' +
+                '<p><b>Target Date:</b> To be Determined</p>' +
+                '<p><b>Service Providers:</b> To be Announced </p>' +
+                '<p><b>Download Speeds:</b> To be Determined </p>' +
+                '<p><b>Upload Speeds:</b> To be Determined</p>' 
+          )
+        .addTo(map);
+     
+      }
+
+});
+
+
+var specialLayers = ['fiber-simple-2', 'wireless-1', 'nointerent-3'];
+
+for(let i=0; i < 3; i++) {
+        let currentLayer = specialLayers[i];;
+            // Change the cursor to a pointer when the mouse is over the places layer.
+            map.on('mouseenter', currentLayer, function() {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            // Change it back to a pointer when it leaves.
+            map.on('mouseleave', currentLayer, function() {
+                map.getCanvas().style.cursor = '';
+            });
+    }
+
+
+    </script>
+  </body>
+</html>
